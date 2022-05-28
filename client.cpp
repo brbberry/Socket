@@ -30,6 +30,22 @@ char **intializeDataBuf(int nbufs, int bufsize)
 }
 */
 
+// TODO better understand what this does and rename
+int getRC(char *serverName, char *serverPort)
+{
+    struct addrinfo hints;
+    struct addrinfo *result, *rp;
+    int clientSD = -1;
+
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;     /* Allow IPv4 or IPv6*/
+    hints.ai_socktype = SOCK_STREAM; /* TCP */
+    hints.ai_flags = 0;              /* Optional Options*/
+    hints.ai_protocol = 0;           /* Allow any protocol*/
+    int rc = getaddrinfo(serverName, serverPort, &hints, &result);
+    return rc;
+}
+
 int alertServerOfReps(int clientSD, char *repetition)
 {
     write(clientSD, repetition, strlen(repetition));
@@ -140,7 +156,7 @@ int main(int argc, char *argv[])
     hints.ai_flags = 0;              /* Optional Options*/
     hints.ai_protocol = 0;           /* Allow any protocol*/
     int rc = getaddrinfo(serverName, serverPort, &hints, &result);
-
+    // int rc = getRC(serverName,serverPort);
     if (rc != 0)
     {
         cerr << "ERROR: " << gai_strerror(rc) << endl;
@@ -203,10 +219,15 @@ int main(int argc, char *argv[])
     // START THE CLOCK
     int bytesWritten = writeToServer(clientSD, reinterpret_cast<char **>(dataBuf), numBufSize, numBufs, writeType);
     cout << "Bytes Written: " << bytesWritten << endl;
-    char* ACK;
-    int bytesRead = read(clientSD, ACK, BUFFSIZE);
-    //END THE CLOCK
-    cout << "Bytes Read: " << bytesRead << endl;
+    char *ACK;
+    int numBytesRead = 0;
+    while (numBytesRead < BUFFSIZE)
+    {
+        numBytesRead += read(clientSD, ACK, BUFFSIZE);
+    }
+
+    // END THE CLOCK
+    cout << "Bytes Read: " << numBytesRead << endl;
     cout << ACK << endl;
 
     close(clientSD);
