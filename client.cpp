@@ -48,8 +48,17 @@ int getRC(char *serverName, char *serverPort)
 
 int alertServerOfReps(int clientSD, char *repetition)
 {
-    write(clientSD, repetition, strlen(repetition));
-    return 0;
+    char val[BUFFSIZE]{0};
+    strcpy(val, repetition);
+    int numWritten = 0;
+
+    while (numWritten < BUFFSIZE)
+    {
+        cout << "here" << endl;
+        numWritten += write(clientSD, val, BUFFSIZE);
+    }
+
+    return numWritten;
 }
 
 int multipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
@@ -144,7 +153,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    char dataBuf[numBufs][numBufSize]{'z'};
+    char dataBuf[numBufs][numBufSize];
 
     struct addrinfo hints;
     struct addrinfo *result, *rp;
@@ -156,7 +165,7 @@ int main(int argc, char *argv[])
     hints.ai_flags = 0;              /* Optional Options*/
     hints.ai_protocol = 0;           /* Allow any protocol*/
     int rc = getaddrinfo(serverName, serverPort, &hints, &result);
-    // int rc = getRC(serverName,serverPort);
+
     if (rc != 0)
     {
         cerr << "ERROR: " << gai_strerror(rc) << endl;
