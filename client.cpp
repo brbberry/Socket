@@ -153,7 +153,12 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    char dataBuf[numBufs][numBufSize];
+    char **dataBuf = new char *[numBufs];
+
+    for (int i = 0; i < numBufs; i++)
+    {
+        dataBuf[i] = new char[numBufSize];
+    }
 
     struct addrinfo hints;
     struct addrinfo *result, *rp;
@@ -226,9 +231,9 @@ int main(int argc, char *argv[])
         cerr << "Unable to send number of reps to server" << endl;
     }
     // START THE CLOCK
-    int bytesWritten = writeToServer(clientSD, reinterpret_cast<char **>(dataBuf), numBufSize, numBufs, writeType);
+    int bytesWritten = writeToServer(clientSD, dataBuf, numBufSize, numBufs, writeType);
     cout << "Bytes Written: " << bytesWritten << endl;
-    char *ACK;
+    char ACK[BUFFSIZE];
     int numBytesRead = 0;
     while (numBytesRead < BUFFSIZE)
     {
@@ -238,6 +243,13 @@ int main(int argc, char *argv[])
     // END THE CLOCK
     cout << "Bytes Read: " << numBytesRead << endl;
     cout << ACK << endl;
+
+    for (int i = 0; i < numBufs; i++)
+    {
+        delete[] dataBuf[i];
+        dataBuf[i] = nullptr;
+    }
+    delete[] dataBuf;
 
     close(clientSD);
 
