@@ -67,13 +67,14 @@ int multipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
     for (int i = 0; i < nbufs; i++)
     {
         int numElemsPerWrite = 0;
+        
         while (numElemsPerWrite != bufsize)
         {
             numElemsPerWrite += write(clientSD, databuf[i], bufsize);
         }
         totalElements += numElemsPerWrite;
     }
-
+    cout << "wrote all I could " << endl;
     return totalElements;
 }
 
@@ -101,22 +102,26 @@ int singleWrite(int clientSD, char **databuf, int bufsize, int nbufs)
     return write(clientSD, databuf, bufsize * nbufs);
 }
 
-int writeToServer(int clientSD, char **databuf, int bufsize, int nbufs, int type)
+int writeToServer(int clientSD, char **databuf, int bufsize, int nbufs, int type, int numItters)
 {
     int numBytesWritten = 0;
-    switch (type)
-    {
-    case MULTIPLE:
-        numBytesWritten = multipleWrites(clientSD, databuf, bufsize, nbufs);
-        break;
-    case ATOMIC_MULTIPLE:
-        numBytesWritten = atomicMultipleWrites(clientSD, databuf, bufsize, nbufs);
-        break;
-    case ONE_WRITE:
-        numBytesWritten = singleWrite(clientSD, databuf, bufsize, nbufs);
-        break;
-    default:
-        return -1;
+    int ittersCompleted = 0;
+    while(ittersCompleted < numItters) {
+        ittersCompleted++;
+        switch (type)
+        {
+        case MULTIPLE:
+            numBytesWritten += multipleWrites(clientSD, databuf, bufsize, nbufs);
+            break;
+        case ATOMIC_MULTIPLE:
+            numBytesWritten += atomicMultipleWrites(clientSD, databuf, bufsize, nbufs);
+            break;
+        case ONE_WRITE:
+            numBytesWritten += singleWrite(clientSD, databuf, bufsize, nbufs);
+            break;
+        default:
+            return -1;
+        }
     }
     return numBytesWritten;
 }
@@ -141,8 +146,11 @@ int main(int argc, char *argv[])
     char *bufsize = argv[5];
     char *type = argv[6];
 
+    int numItters = atoi(repetition);
     int numBufs = atoi(nbufs);
+    // +1 to account for the null terminanting char
     int numBufSize = atoi(bufsize);
+    cout << "numBufSize: " << numBufSize << endl;
     int writeType = atoi(type);
 
     // we need to be assuredof 1500
@@ -217,13 +225,15 @@ int main(int argc, char *argv[])
     /*
      *  Write and read data over network
      */
-    /*
-    databuf = new char[BUFFSIZE];
-    for (int i = 0; i < BUFFSIZE; i++)
+    // ADDED NEED TO GET TO GIT
+    
+    for (int i = 0; i < numBufs; i++)
     {
-        databuf[i] = 'z';
+        for(int j = 0; j < numBufSize; j++) {
+            dataBuf[i][j] = 'z';
+        }
     }
-    */
+    
 
     int repsSent = alertServerOfReps(clientSD, repetition);
     if (repsSent <= 0)
@@ -231,7 +241,7 @@ int main(int argc, char *argv[])
         cerr << "Unable to send number of reps to server" << endl;
     }
     // START THE CLOCK
-    int bytesWritten = writeToServer(clientSD, dataBuf, numBufSize, numBufs, writeType);
+    int bytesWritten = writeToServer(clientSD, dataBuf, numBufSize, numBufs, writeType, numItters);
     cout << "Bytes Written: " << bytesWritten << endl;
     char ACK[BUFFSIZE];
     int numBytesRead = 0;

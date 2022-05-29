@@ -20,13 +20,14 @@ typedef struct serviceParam
 {
     int clientSD_;
     char *dataBuf_;
+    int numItters_;
 
 } ServiceParam;
 
 int readItters(int clienSD, char *databuf)
 {
     int numRead = 0;
-    while (numRead < BUFFSIZE)
+    while (numRead != BUFFSIZE)
     {
         numRead += read(clienSD, databuf, BUFFSIZE);
     }
@@ -35,17 +36,26 @@ int readItters(int clienSD, char *databuf)
     return numItters;
 }
 
-int readFromClient(int clientSD, char *dataBuf)
+int readFromClient(int clientSD, char *dataBuf, int numItters)
 {
     int numRead = 0;
     int numReadCalls = 0;
-    while (numRead != BUFFSIZE)
-    {
-        numRead += read(clientSD, dataBuf, BUFFSIZE);
-        numReadCalls++;
+    // we will eventually want mult by num itters
+
+    int actuallyRead = 0;
+    int ittersCompleted = 0;
+    cout << "Num Itters actual: " << numItters << endl;
+    while(ittersCompleted < numItters) {
+        while (numRead != BUFFSIZE)
+        {
+            numRead += read(clientSD, dataBuf, (BUFFSIZE - numRead));
+            numReadCalls++;
+            cout << "I have read :" << numRead << " bytes" << endl;
+        }
+        numRead = 0;
+        ittersCompleted++;
+        cout << "Server reading on socket " << clientSD << endl;
     }
-    cout << "Server reading on socket " << clientSD << "\n"
-         << dataBuf << endl;
     return numReadCalls;
 }
 
@@ -69,7 +79,7 @@ void *severThread(void *arg)
 {
     ServiceParam *service = static_cast<ServiceParam *>(arg);
 
-    int numReadCalls = readFromClient(service->clientSD_, service->dataBuf_);
+    int numReadCalls = readFromClient(service->clientSD_, service->dataBuf_, service->numItters_);
     writeNumReadsToClient(service->clientSD_, numReadCalls);
     close(service->clientSD_);
     pthread_exit(0);
@@ -119,11 +129,16 @@ int main(int argc, char *argv[])
         char databuf[BUFFSIZE];
         newSD = accept(serverSD, (sockaddr *)&newSockAddr, &newSockAddrSize);
         cout << "Accepted Socket #: " << newSD << endl;
+        int numItters = readItters(newSD,databuf);
         ServiceParam serverRequestParam;
         serverRequestParam.clientSD_ = newSD;
         serverRequestParam.dataBuf_ = databuf;
+        serverRequestParam.numItters_ = numItters;
+        cout << "Itters #: " << numItters << endl;
         pthread_t id;
         int offset1 = 1;
+  
+
         pthread_create(&id, NULL, severThread, (void *)&serverRequestParam);
     }
 
