@@ -74,7 +74,6 @@ int multipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
         }
         totalElements += numElemsPerWrite;
     }
-    cout << "wrote all I could " << endl;
     return totalElements;
 }
 
@@ -86,12 +85,9 @@ int atomicMultipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
     {
         vector[i].iov_base = databuf[i];
         vector[i].iov_len = bufsize;
-        int numElemsPerWrite = 0;
-        while (numElemsPerWrite != bufsize)
-        {
-            numElemsPerWrite += writev(clientSD, vector, bufsize);
-        }
-        totalElements += numElemsPerWrite;
+    }
+    while(totalElements < BUFFSIZE) {
+        totalElements += writev(clientSD, vector, nbufs);
     }
 
     return totalElements;
@@ -99,6 +95,7 @@ int atomicMultipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
 
 int singleWrite(int clientSD, char **databuf, int bufsize, int nbufs)
 {
+    
     return write(clientSD, databuf, bufsize * nbufs);
 }
 
