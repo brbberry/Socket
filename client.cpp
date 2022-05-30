@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
+#include <math.h>
 using namespace std;
 
 const int BUFFSIZE = 1500;
@@ -19,16 +21,6 @@ enum writeType
     ATOMIC_MULTIPLE = 2,
     ONE_WRITE = 3
 };
-/*
-char **intializeDataBuf(int nbufs, int bufsize)
-{
-    char **databuf = new char *[bufsize];
-    for (int i = 0; i < nbufs; i++)
-    {
-        databuf[i] = new char[bufsize];
-    }
-}
-*/
 
 // TODO better understand what this does and rename
 int getRC(char *serverName, char *serverPort)
@@ -54,7 +46,6 @@ int alertServerOfReps(int clientSD, char *repetition)
 
     while (numWritten < BUFFSIZE)
     {
-        cout << "here" << endl;
         numWritten += write(clientSD, val, BUFFSIZE);
     }
 
@@ -95,8 +86,14 @@ int atomicMultipleWrites(int clientSD, char **databuf, int bufsize, int nbufs)
 
 int singleWrite(int clientSD, char **databuf, int bufsize, int nbufs)
 {
-    
-    return write(clientSD, databuf, bufsize * nbufs);
+    int totalWritten = 0;
+
+    while(totalWritten != bufsize * nbufs) 
+    {
+        totalWritten += write(clientSD, databuf, bufsize * nbufs);
+    }
+
+    return totalWritten;
 }
 
 int writeToServer(int clientSD, char **databuf, int bufsize, int nbufs, int type, int numItters)
@@ -145,9 +142,7 @@ int main(int argc, char *argv[])
 
     int numItters = atoi(repetition);
     int numBufs = atoi(nbufs);
-    // +1 to account for the null terminanting char
     int numBufSize = atoi(bufsize);
-    cout << "numBufSize: " << numBufSize << endl;
     int writeType = atoi(type);
 
     // we need to be assuredof 1500
@@ -222,7 +217,6 @@ int main(int argc, char *argv[])
     /*
      *  Write and read data over network
      */
-    // ADDED NEED TO GET TO GIT
     
     for (int i = 0; i < numBufs; i++)
     {
@@ -238,18 +232,23 @@ int main(int argc, char *argv[])
         cerr << "Unable to send number of reps to server" << endl;
     }
     // START THE CLOCK
+    chrono::_V2::steady_clock::time_point start = chrono::steady_clock::now();
     int bytesWritten = writeToServer(clientSD, dataBuf, numBufSize, numBufs, writeType, numItters);
-    cout << "Bytes Written: " << bytesWritten << endl;
     char ACK[BUFFSIZE];
     int numBytesRead = 0;
-    while (numBytesRead < BUFFSIZE)
+    while (numBytesRead != BUFFSIZE)
     {
         numBytesRead += read(clientSD, ACK, BUFFSIZE);
     }
-
-    // END THE CLOCK
-    cout << "Bytes Read: " << numBytesRead << endl;
-    cout << ACK << endl;
+    // end clock
+    chrono::_V2::steady_clock::time_point end = chrono::steady_clock::now();
+    cout << "Number of Reads: " << ACK << endl;
+    std::chrono::duration<double> time = end - start;
+    double gb = numItters*BUFFSIZE/pow(10.0,6.0);
+    double totalTime = time.count();
+    double gbs = gb/totalTime;
+    cout << "Test = " << type <<  " Total Time = " << totalTime << " μs," 
+         << "#reads = " << ACK << ", throughput = " << gbs << " Gbps" << endl;
 
     for (int i = 0; i < numBufs; i++)
     {

@@ -44,17 +44,14 @@ int readFromClient(int clientSD, char *dataBuf, int numItters)
 
     int actuallyRead = 0;
     int ittersCompleted = 0;
-    cout << "Num Itters actual: " << numItters << endl;
     while(ittersCompleted < numItters) {
         while (numRead != BUFFSIZE)
         {
             numRead += read(clientSD, dataBuf, (BUFFSIZE - numRead));
             numReadCalls++;
-            cout << "I have read :" << numRead << " bytes" << endl;
         }
         numRead = 0;
         ittersCompleted++;
-        cout << "Server reading on socket " << clientSD << endl;
     }
     return numReadCalls;
 }
@@ -68,7 +65,7 @@ void writeNumReadsToClient(int clientSD, int numReads)
     strcpy(val, cStringNum);
 
     int numBytesRead = 0;
-    cout << "Server writing on socket " << clientSD << " numReads: " << numReads << endl;
+    //cout << "Server writing on socket " << clientSD << " numReads: " << numReads << endl;
     while (numBytesRead < BUFFSIZE)
     {
         numBytesRead += write(clientSD, cStringNum, BUFFSIZE);
@@ -128,18 +125,22 @@ int main(int argc, char *argv[])
     {
         char databuf[BUFFSIZE];
         newSD = accept(serverSD, (sockaddr *)&newSockAddr, &newSockAddrSize);
-        cout << "Accepted Socket #: " << newSD << endl;
-        int numItters = readItters(newSD,databuf);
-        ServiceParam serverRequestParam;
-        serverRequestParam.clientSD_ = newSD;
-        serverRequestParam.dataBuf_ = databuf;
-        serverRequestParam.numItters_ = numItters;
-        cout << "Itters #: " << numItters << endl;
-        pthread_t id;
-        int offset1 = 1;
-  
+        if(newSD == -1 ) {
+            cout << "Connection Error: " << newSD << endl;
+        } else {
+            cout << "Accepted Socket #: " << newSD << endl;
+            int numItters = readItters(newSD,databuf);
+            ServiceParam serverRequestParam;
+            serverRequestParam.clientSD_ = newSD;
+            serverRequestParam.dataBuf_ = databuf;
+            serverRequestParam.numItters_ = numItters;
+            pthread_t id;
+            int offset1 = 1;
+    
 
-        pthread_create(&id, NULL, severThread, (void *)&serverRequestParam);
+            pthread_create(&id, NULL, severThread, (void *)&serverRequestParam);
+        }
+
     }
 
     return 0;
