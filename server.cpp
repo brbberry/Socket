@@ -71,12 +71,13 @@ int openSocketAndBind(sockaddr_in& acceptSocketAddress) {
 int readItters(int clienSD, char *databuf)
 {
     int numRead = 0;
-    while (numRead != BUFFSIZE)
+    uint32_t networkNumItters;
+    while (numRead != sizeof(uint32_t))
     {
-        numRead += read(clienSD, databuf, BUFFSIZE);
+        numRead += read(clienSD, &networkNumItters, sizeof(uint32_t));
     }
 
-    int numItters = atoi(databuf);
+    int numItters = ntohl(networkNumItters);
     return numItters;
 }
 
@@ -107,17 +108,13 @@ int readFromClient(int clientSD, char *dataBuf, int numItters)
 // Postconditions: writes to the client the number of reads performed
 void writeNumReadsToClient(int clientSD, int numReads)
 {
-    string num = to_string(numReads);
-    char val[BUFFSIZE];
-    const char *cStringNum = num.c_str();
-    size_t len = strlen(cStringNum);
-    strcpy(val, cStringNum);
-
-    int numBytesRead = 0;
-    while (numBytesRead < BUFFSIZE)
+    int numWritten = 0;
+    uint32_t networkNumReads = htonl(numReads);
+    while (numWritten < sizeof(uint32_t))
     {
-        numBytesRead += write(clientSD, cStringNum, BUFFSIZE);
+        numWritten += write(clientSD, &networkNumReads, sizeof(uint32_t));
     }
+    return;
 }
 
 //-------------------------- serverThread -------------------------------------
@@ -150,7 +147,10 @@ int main(int argc, char *argv[])
     /*
      * Build address
      */
-    int port = 30556;
+    if(argc != 2) {
+        return -1;
+    }
+    int port = atoi(argv[1]);
     sockaddr_in acceptSocketAddress;
     buildAddress(port, acceptSocketAddress);
 

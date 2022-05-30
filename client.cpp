@@ -22,32 +22,52 @@ enum writeType
     ONE_WRITE = 3
 };
 
-// TODO better understand what this does and rename
-int getRC(char *serverName, char *serverPort)
-{
-    struct addrinfo hints;
-    struct addrinfo *result, *rp;
-    int clientSD = -1;
+char** intializeMessage(int numBufs, int bufSize) {
+    char** message = new char *[numBufs];
 
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;     /* Allow IPv4 or IPv6*/
-    hints.ai_socktype = SOCK_STREAM; /* TCP */
-    hints.ai_flags = 0;              /* Optional Options*/
-    hints.ai_protocol = 0;           /* Allow any protocol*/
-    int rc = getaddrinfo(serverName, serverPort, &hints, &result);
-    return rc;
+    for (int i = 0; i < numBufs; i++)
+    {
+        message[i] = new char[bufSize];
+        for(int j = 0; j < bufSize; j++) {
+            message[i][j] = 'z';
+        }
+    }
+    return message;
+}
+
+void freeMessage(char** message, int numBufs) {
+    for (int i = 0; i < numBufs; i++)
+    {
+        delete[] message[i];
+        message[i] = nullptr;
+    }
+    delete[] message;
+    message = nullptr;
+}
+
+int getSeverReads(int clientSD) {
+
+    int numRead = 0;
+    uint32_t networkNumReads;
+    while (numRead != sizeof(uint32_t))
+    {
+        numRead += read(clientSD, &networkNumReads, sizeof(uint32_t));
+    }
+
+    int numReads = ntohl(networkNumReads);
+    return numReads;
 }
 
 int alertServerOfReps(int clientSD, char *repetition)
 {
-    char val[BUFFSIZE]{0};
-    strcpy(val, repetition);
+    int numItters = atoi(repetition);
     int numWritten = 0;
-
-    while (numWritten < BUFFSIZE)
+    uint32_t networkNumItters = htonl(numItters);
+    while (numWritten < sizeof(uint32_t))
     {
-        numWritten += write(clientSD, val, BUFFSIZE);
+        numWritten += write(clientSD, &networkNumItters, sizeof(uint32_t));
     }
+    
 
     return numWritten;
 }
@@ -153,13 +173,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    char **dataBuf = new char *[numBufs];
-
-    for (int i = 0; i < numBufs; i++)
-    {
-        dataBuf[i] = new char[numBufSize];
-    }
-
+    char **dataBuf = intializeMessage(numBufs,numBufSize);
     struct addrinfo hints;
     struct addrinfo *result, *rp;
     int clientSD = -1;
@@ -218,13 +232,7 @@ int main(int argc, char *argv[])
      *  Write and read data over network
      */
     
-    for (int i = 0; i < numBufs; i++)
-    {
-        for(int j = 0; j < numBufSize; j++) {
-            dataBuf[i][j] = 'z';
-        }
-    }
-    
+
 
     int repsSent = alertServerOfReps(clientSD, repetition);
     if (repsSent <= 0)
@@ -234,29 +242,18 @@ int main(int argc, char *argv[])
     // START THE CLOCK
     chrono::_V2::steady_clock::time_point start = chrono::steady_clock::now();
     int bytesWritten = writeToServer(clientSD, dataBuf, numBufSize, numBufs, writeType, numItters);
-    char ACK[BUFFSIZE];
-    int numBytesRead = 0;
-    while (numBytesRead != BUFFSIZE)
-    {
-        numBytesRead += read(clientSD, ACK, BUFFSIZE);
-    }
+    int numReads = getSeverReads(clientSD);
     // end clock
     chrono::_V2::steady_clock::time_point end = chrono::steady_clock::now();
-    cout << "Number of Reads: " << ACK << endl;
+    cout << "Number of Reads: " << numReads << endl;
     std::chrono::duration<double> time = end - start;
-    double gb = numItters*BUFFSIZE/pow(10.0,6.0);
+    double gb = (8*numItters*BUFFSIZE)/pow(10.0,6.0);
     double totalTime = time.count();
     double gbs = gb/totalTime;
     cout << "Test = " << type <<  " Total Time = " << totalTime << " μs," 
-         << "#reads = " << ACK << ", throughput = " << gbs << " Gbps" << endl;
+         << "#reads = " << numReads << ", throughput = " << gbs << " Gbps" << endl;
 
-    for (int i = 0; i < numBufs; i++)
-    {
-        delete[] dataBuf[i];
-        dataBuf[i] = nullptr;
-    }
-    delete[] dataBuf;
-
+    freeMessage(dataBuf,numBufs);
     close(clientSD);
 
     return 0;
