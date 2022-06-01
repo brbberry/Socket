@@ -32,25 +32,25 @@ typedef struct serviceParam
 
 } ServiceParam;
 
-
 //-------------------------- buildAddress -------------------------------------
 // Builds a socket address given a port number
 // Preconditions : The port number is assumed to be valid
 // Postconditions: Modifies the sockadd_in by refrence setting it up with the
 //                 given port
-void buildAddress(int port, sockaddr_in& acceptSocketAddress) {
+void buildAddress(int port, sockaddr_in &acceptSocketAddress)
+{
     bzero((char *)&acceptSocketAddress, sizeof(acceptSocketAddress));
     acceptSocketAddress.sin_family = AF_INET;
     acceptSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     acceptSocketAddress.sin_port = htons(port);
 }
 
-
 //------------------------- OpenSocketAndBind ---------------------------------
 // Opens a socket and binds using the TCP protocol
 // Preconditions : The socketaddress must be set up using buildaddress()
 // Postconditions: Creates a server socket and binds the server to it
-int openSocketAndBind(sockaddr_in& acceptSocketAddress) {
+int openSocketAndBind(sockaddr_in &acceptSocketAddress)
+{
     int serverSD = socket(AF_INET, SOCK_STREAM, 0);
     const int on = 1;
     setsockopt(serverSD, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(int));
@@ -90,7 +90,8 @@ int readFromClient(int clientSD, char *dataBuf, int numItters)
     int numRead = 0;
     int numReadCalls = 0;
     int ittersCompleted = 0;
-    while(ittersCompleted < numItters) {
+    while (ittersCompleted < numItters)
+    {
         while (numRead != BUFFSIZE)
         {
             numRead += read(clientSD, dataBuf, (BUFFSIZE - numRead));
@@ -118,9 +119,9 @@ void writeNumReadsToClient(int clientSD, int numReads)
 }
 
 //-------------------------- serverThread -------------------------------------
-// Server Thread operation that reads from the client and then writes back to 
+// Server Thread operation that reads from the client and then writes back to
 // the client the number of read calls performed
-// Preconditions : a connection between the server and client must be 
+// Preconditions : a connection between the server and client must be
 //                 established
 // Postconditions: reads and writes from the client, closing the socket after
 //                 and terminates the thread
@@ -128,8 +129,8 @@ void *severThread(void *arg)
 {
     ServiceParam *service = static_cast<ServiceParam *>(arg);
 
-    int numReadCalls = readFromClient(service->clientSD_, 
-                                      service->dataBuf_, 
+    int numReadCalls = readFromClient(service->clientSD_,
+                                      service->dataBuf_,
                                       service->numItters_);
     writeNumReadsToClient(service->clientSD_, numReadCalls);
     close(service->clientSD_);
@@ -147,7 +148,8 @@ int main(int argc, char *argv[])
     /*
      * Build address
      */
-    if(argc != 2) {
+    if (argc != 2)
+    {
         return -1;
     }
     int port = atoi(argv[1]);
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
     /*
      *  Open socket and bind
      */
-    int serverSD =  openSocketAndBind(acceptSocketAddress);
+    int serverSD = openSocketAndBind(acceptSocketAddress);
 
     /*
      *  listen and accept
@@ -171,11 +173,14 @@ int main(int argc, char *argv[])
     {
         char databuf[BUFFSIZE];
         newSD = accept(serverSD, (sockaddr *)&newSockAddr, &newSockAddrSize);
-        if(newSD == -1 ) {
+        if (newSD == -1)
+        {
             cout << "Connection Error: " << newSD << endl;
-        } else {
+        }
+        else
+        {
             cout << "Accepted Socket #: " << newSD << endl;
-            int numItters = readItters(newSD,databuf);
+            int numItters = readItters(newSD, databuf);
             ServiceParam serverRequestParam;
             serverRequestParam.clientSD_ = newSD;
             serverRequestParam.dataBuf_ = databuf;
@@ -184,7 +189,6 @@ int main(int argc, char *argv[])
             int offset1 = 1;
             pthread_create(&id, NULL, severThread, (void *)&serverRequestParam);
         }
-
     }
 
     return 0;
