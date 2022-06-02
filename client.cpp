@@ -116,7 +116,7 @@ void validateClientArguments(int numItters, int numBufs, int numBufSize,
         exit(EXIT_FAILURE);
     }
 
-    if (writeType != MULTIPLE || writeType != ATOMIC_MULTIPLE ||
+    if (writeType != MULTIPLE && writeType != ATOMIC_MULTIPLE &&
         writeType != ONE_WRITE)
     {
         cerr << "Incorrect write type" << writeType << endl;
