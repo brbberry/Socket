@@ -179,7 +179,6 @@ int main(int argc, char *argv[])
         }
         else
         {
-            cout << "Accepted Socket #: " << newSD << endl;
             int numItters = readItters(newSD, databuf);
             ServiceParam serverRequestParam;
             serverRequestParam.clientSD_ = newSD;

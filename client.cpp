@@ -352,17 +352,16 @@ int main(int argc, char *argv[])
 
     clockTime end = chrono::steady_clock::now();
 
-    cout << "Number of Reads: " << numReads << endl;
-
     chrono::duration<double> time = end - start;
 
     double gb = (8 * numItters * BUFFSIZE) / pow(10.0, 9.0);
     double totalTime = time.count();
     double gbs = gb / totalTime;
-
+    
     cout << "Test = " << type << " Total Time = " << totalTime << " μs,"
          << "#reads = " << numReads << ", throughput = " << gbs << " Gbps"
          << endl;
+         
 
     freeMessage(dataBuf, numBufs);
     close(clientSD);
